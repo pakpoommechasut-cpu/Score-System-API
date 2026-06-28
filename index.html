@@ -266,11 +266,11 @@
     transition: width .4s ease;
   }
   .c-high   { color: var(--success); }
-  .c-mid    { color: var(--warning); }
-  .c-low    { color: var(--danger); }
+  .c-mid    { color: var(--success); }
+  .c-low    { color: var(--success); }
   .bg-high  { background: var(--success); }
-  .bg-mid   { background: var(--warning); }
-  .bg-low   { background: var(--danger); }
+  .bg-mid   { background: var(--success); }
+  .bg-low   { background: var(--success); }
 
   .tfoot-row td {
     background: var(--gray-50);
@@ -654,7 +654,7 @@ function renderScores(data) {
     const tot     = scored.reduce((s, t) => s + t.score, 0);
     const totMax  = scored.reduce((s, t) => s + t.max, 0);
     const pct     = totMax > 0 ? Math.round(tot / totMax * 100) : 0;
-    const color   = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+    const color   = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--success)' : 'var(--success)';
     const display = scored.length > 0 ? `${tot} / ${totMax}` : '–';
     const pctStr  = scored.length > 0 ? `(${pct}%)` : '';
     return `<div class="summary-box">
