@@ -279,6 +279,24 @@
     border-top: 2px solid var(--gray-200);
   }
 
+  /* Group rows */
+  .group-header-row td {
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 700;
+    font-size: .85rem;
+    padding: 8px 16px;
+    letter-spacing: .3px;
+    border-top: 1px solid #c7d9f5;
+  }
+  .subtotal-row td {
+    background: var(--gray-50);
+    font-weight: 600;
+    font-size: .88rem;
+    color: var(--gray-600);
+    border-top: 1px dashed var(--gray-200);
+  }
+
   /* Loading spinner */
   .spinner-wrap {
     display: flex;
@@ -603,36 +621,79 @@ async function selectSubject(key) {
   }
 }
 
+function getCategory(name) {
+  const n = name.trim().toLowerCase();
+  if (n.startsWith('assignment')) return 'Assignment';
+  if (n.startsWith('quiz'))       return 'Quiz';
+  return 'อื่นๆ';
+}
+
+function scoreEl(t) {
+  if (t.score === null) return `<span class="score-pending">รอให้คะแนน</span>`;
+  const p   = t.max > 0 ? t.score / t.max : 0;
+  const cls = p >= 0.8 ? 'high' : p >= 0.5 ? 'mid' : 'low';
+  return `<div class="score-wrap">
+    <span class="score-text c-${cls}">${t.score} / ${t.max}</span>
+    <div class="progress-outer"><div class="progress-inner bg-${cls}" style="width:${Math.round(p*100)}%"></div></div>
+  </div>`;
+}
+
 function renderScores(data) {
   const { name, group, subject_name, tasks } = data;
 
-  const scored   = tasks.filter(t => t.score !== null);
-  const total    = scored.reduce((s, t) => s + t.score, 0);
-  const totalMax = scored.reduce((s, t) => s + t.max, 0);
-  const pct      = totalMax > 0 ? Math.round(total / totalMax * 100) : 0;
-  const pending  = tasks.length - scored.length;
+  // ── Group tasks by category ──
+  const ORDER = ['Assignment', 'Quiz', 'อื่นๆ'];
+  const groups = {};
+  ORDER.forEach(c => { groups[c] = []; });
+  tasks.forEach(t => groups[getCategory(t.name)].push(t));
 
-  const rows = tasks.map((t, i) => {
-    const scoreEl = t.score === null
-      ? `<span class="score-pending">รอให้คะแนน</span>`
-      : (() => {
-          const p = t.max > 0 ? t.score / t.max : 0;
-          const cls  = p >= 0.8 ? 'high' : p >= 0.5 ? 'mid' : 'low';
-          return `
-            <div class="score-wrap">
-              <span class="score-text c-${cls}">${t.score} / ${t.max}</span>
-              <div class="progress-outer">
-                <div class="progress-inner bg-${cls}" style="width:${Math.round(p*100)}%"></div>
-              </div>
-            </div>`;
-        })();
+  // ── Summary boxes per category ──
+  const summaryBoxes = ORDER.filter(c => groups[c].length > 0).map(c => {
+    const grp     = groups[c];
+    const scored  = grp.filter(t => t.score !== null);
+    const tot     = scored.reduce((s, t) => s + t.score, 0);
+    const totMax  = scored.reduce((s, t) => s + t.max, 0);
+    const pct     = totMax > 0 ? Math.round(tot / totMax * 100) : 0;
+    const color   = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+    const display = scored.length > 0 ? `${tot} / ${totMax}` : '–';
+    const pctStr  = scored.length > 0 ? `(${pct}%)` : '';
+    return `<div class="summary-box">
+      <div class="val" style="color:${scored.length>0?color:'var(--gray-400)'}">${display}</div>
+      <div class="lbl">คะแนน${c} ${pctStr}</div>
+    </div>`;
+  }).join('');
 
-    return `<tr>
-      <td>${i + 1}</td>
-      <td>${escHtml(t.name)}</td>
-      <td style="text-align:center">${t.max}</td>
-      <td>${scoreEl}</td>
-    </tr>`;
+  // ── Table body rows grouped ──
+  let idx = 0;
+  const bodyRows = ORDER.filter(c => groups[c].length > 0).map(c => {
+    const grp    = groups[c];
+    const scored = grp.filter(t => t.score !== null);
+    const tot    = scored.reduce((s, t) => s + t.score, 0);
+    const totMax = scored.reduce((s, t) => s + t.max, 0);
+    const pct    = totMax > 0 ? Math.round(tot / totMax * 100) : 0;
+
+    const taskRows = grp.map(t => {
+      idx++;
+      return `<tr>
+        <td>${idx}</td>
+        <td>${escHtml(t.name)}</td>
+        <td style="text-align:center">${t.max}</td>
+        <td>${scoreEl(t)}</td>
+      </tr>`;
+    }).join('');
+
+    const subtotalScore = scored.length > 0
+      ? `${tot} / ${totMax} <span style="font-size:.8rem;color:var(--gray-400)">(${pct}%)</span>`
+      : `<span style="color:var(--gray-400)">–</span>`;
+
+    return `
+      <tr class="group-header-row"><td colspan="4">${c}</td></tr>
+      ${taskRows}
+      <tr class="subtotal-row">
+        <td colspan="2" style="padding-left:24px">รวม${c}</td>
+        <td style="text-align:center">${totMax > 0 ? totMax : '–'}</td>
+        <td style="text-align:center">${subtotalScore}</td>
+      </tr>`;
   }).join('');
 
   document.getElementById('dashContent').innerHTML = `
@@ -648,19 +709,8 @@ function renderScores(data) {
       </div>
     </div>
 
-    <div class="summary-strip">
-      <div class="summary-box">
-        <div class="val">${tasks.length}</div>
-        <div class="lbl">จำนวนงานทั้งหมด</div>
-      </div>
-      <div class="summary-box">
-        <div class="val" style="color:${pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'}">${total} / ${totalMax}</div>
-        <div class="lbl">คะแนนรวม (${pct}%)</div>
-      </div>
-      <div class="summary-box">
-        <div class="val" style="color:${pending>0?'var(--warning)':'var(--success)'}">${pending}</div>
-        <div class="lbl">รอให้คะแนน</div>
-      </div>
+    <div class="summary-strip" style="grid-template-columns:repeat(${ORDER.filter(c=>groups[c].length>0).length},1fr)">
+      ${summaryBoxes}
     </div>
 
     <div class="table-wrap">
@@ -673,14 +723,7 @@ function renderScores(data) {
             <th style="text-align:center">คะแนนที่ได้</th>
           </tr>
         </thead>
-        <tbody>${rows}</tbody>
-        <tfoot>
-          <tr class="tfoot-row">
-            <td colspan="2">รวม (เฉพาะงานที่ให้คะแนนแล้ว)</td>
-            <td style="text-align:center">${totalMax}</td>
-            <td style="text-align:center">${total} <span style="font-size:.8rem;color:var(--gray-400)">(${pct}%)</span></td>
-          </tr>
-        </tfoot>
+        <tbody>${bodyRows}</tbody>
       </table>
     </div>
   `;
