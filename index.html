@@ -222,7 +222,7 @@
   /* Summary strip */
   .summary-strip {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 12px;
     margin-bottom: 20px;
   }
@@ -241,9 +241,10 @@
     background: #fff;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    overflow: hidden;
+    overflow-x: auto;   /* scroll แนวนอนบน screen แคบ */
+    -webkit-overflow-scrolling: touch;
   }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; min-width: 360px; }
   thead { background: var(--primary); color: #fff; }
   thead th {
     padding: 12px 16px;
@@ -330,12 +331,44 @@
     font-size: .95rem;
   }
 
-  /* Responsive */
-  @media (max-width: 600px) {
-    .card { padding: 28px 22px; }
-    main { padding: 20px 14px; }
-    .summary-strip { grid-template-columns: 1fr 1fr; }
-    thead th:nth-child(2), td:nth-child(2) { display: none; }
+  /* ─── Responsive ─── */
+
+  /* Tablet (≤768px) */
+  @media (max-width: 768px) {
+    main { padding: 20px 16px; max-width: 100%; }
+    .header-sub { display: none; }
+    .summary-strip { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important; }
+    .tab-btn { font-size: .82rem; padding: 7px 14px; }
+  }
+
+  /* Mobile (≤480px) */
+  @media (max-width: 480px) {
+    header { padding: 10px 14px; }
+    .header-brand { font-size: .95rem; }
+    #headerName { display: none; }
+    .avatar { width: 30px; height: 30px; font-size: .85rem; }
+    #btnLogout { padding: 4px 10px; font-size: .78rem; }
+
+    .auth-wrap { padding: 20px 12px; align-items: flex-start; padding-top: 32px; }
+    .card { padding: 24px 18px; }
+
+    main { padding: 16px 12px; }
+    .section-title { font-size: .95rem; }
+    .module-label { font-size: .72rem; }
+    .tab-btn { font-size: .8rem; padding: 6px 12px; }
+
+    .info-card { padding: 14px 16px; gap: 12px; }
+    .info-card .icon { width: 38px; height: 38px; }
+    .info-name { font-size: .95rem; }
+    .info-meta { font-size: .78rem; }
+
+    .summary-strip { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+    .summary-box { padding: 12px 10px; }
+    .summary-box .val { font-size: 1.2rem; }
+    .summary-box .lbl { font-size: .72rem; }
+
+    td { padding: 10px 10px; font-size: .82rem; }
+    thead th { padding: 10px 10px; font-size: .8rem; }
   }
 </style>
 </head>
@@ -726,7 +759,7 @@ function renderScores(data) {
       </div>
     </div>
 
-    <div class="summary-strip" style="grid-template-columns:repeat(${ORDER.filter(c=>groups[c].length>0).length},1fr)">
+    <div class="summary-strip">
       ${summaryBoxes}
     </div>
 
