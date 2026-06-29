@@ -162,23 +162,32 @@
   .section-title { font-size: 1.05rem; font-weight: 700; color: var(--gray-800); margin-bottom: 14px; }
 
   /* Subject tabs */
+  .module-group { margin-bottom: 20px; }
+  .module-label {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 8px;
+  }
   .tab-list {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 24px;
   }
   .tab-btn {
-    padding: 9px 22px;
+    padding: 8px 18px;
     border-radius: 7px;
     border: 1.5px solid var(--gray-200);
     background: #fff;
     color: var(--gray-600);
     font-family: 'Sarabun', sans-serif;
-    font-size: .92rem;
+    font-size: .88rem;
     font-weight: 500;
     cursor: pointer;
     transition: all .18s;
+    white-space: nowrap;
   }
   .tab-btn:hover { border-color: var(--primary); color: var(--primary); }
   .tab-btn.active {
@@ -411,7 +420,7 @@
 <div id="viewDashboard" class="view">
   <main>
     <p class="section-title">เลือกรายวิชา</p>
-    <div class="tab-list" id="tabList"></div>
+    <div id="moduleGroups"></div>
     <div id="dashContent"></div>
   </main>
 </div>
@@ -420,7 +429,7 @@
 // ══════════════════════════════════════════════════════
 // ⚠️  ตั้งค่า URL ของ Apps Script ที่ deploy แล้ว
 // ══════════════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbyP615tAlu-rYzuRM0MkbGG-DndINXnRbx9ehj4I63Ktly_ptiJI5eb2XVbSl9L4mX5mg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyP615tAlu-rYzuRM0MkbGG-DndINXnRbx9ehj4I63Ktly_ptiJI5eb2XVbSl9L4mX5mg/exec?action=get_subjects';
 
 // ──────────────────────────────────────────────────────
 // State
@@ -429,7 +438,7 @@ const S = {
   studentId: null,
   name: null,
   pwHash: null,       // SHA-256 ของรหัสผ่านปัจจุบัน
-  subjects: [],
+  modules: [],        // [{ module, subjects }]
   activeSubject: null
 };
 
@@ -570,16 +579,17 @@ async function handleChangePw() {
 async function loadDashboard() {
   showView('viewDashboard');
   showHeader(true);
-  renderTabs([]);
+  renderModuleGroups([]);
   setContent(spinnerHTML());
 
   try {
     const res = await api({ action: 'get_subjects' });
     if (!res.success) throw new Error(res.error);
-    S.subjects = res.subjects;
-    renderTabs(S.subjects);
-    if (S.subjects.length > 0) {
-      selectSubject(S.subjects[0].key);
+    S.modules = res.modules; // [{ module, subjects: [{key, name}] }]
+    renderModuleGroups(S.modules);
+    const firstSubject = S.modules[0]?.subjects[0];
+    if (firstSubject) {
+      selectSubject(firstSubject.key);
     } else {
       setContent('<div class="empty-state">ยังไม่มีรายวิชาในระบบ</div>');
     }
@@ -588,11 +598,18 @@ async function loadDashboard() {
   }
 }
 
-function renderTabs(subjects) {
-  const list = document.getElementById('tabList');
-  list.innerHTML = subjects.map(s =>
-    `<button class="tab-btn" id="tab-${s.key}" onclick="selectSubject('${s.key}')">${s.name}</button>`
-  ).join('');
+function renderModuleGroups(modules) {
+  const container = document.getElementById('moduleGroups');
+  container.innerHTML = modules.map(m => `
+    <div class="module-group">
+      <div class="module-label">${escHtml(m.module)}</div>
+      <div class="tab-list">
+        ${m.subjects.map(s =>
+          `<button class="tab-btn" id="tab-${s.key}" onclick="selectSubject('${s.key}')">${escHtml(s.name)}</button>`
+        ).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 async function selectSubject(key) {
