@@ -583,7 +583,7 @@ async function loadDashboard() {
   setContent(spinnerHTML());
 
   try {
-    const res = await api({ action: 'get_subjects' });
+    const res = await api({ action: 'get_subjects', student_id: S.studentId, password_hash: S.pwHash });
     if (!res.success) throw new Error(res.error);
     S.modules = res.modules; // [{ module, subjects: [{key, name}] }]
     renderModuleGroups(S.modules);
